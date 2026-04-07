@@ -14,7 +14,7 @@ from filter import PlateFilter
 # ==============================
 class Config:
     MODEL_PATH = "models/best.pt"
-    # ✅ FIX Bug 2: One confidence threshold used everywhere.
+    #  2: One confidence threshold used everywhere.
     # crop_plates() will use this same value, so no detections are silently dropped.
     CONFIDENCE = 0.5
     COOLDOWN_SECONDS = 5
@@ -28,7 +28,7 @@ model = YOLO(Config.MODEL_PATH)
 logger = VehicleLogger()
 plate_filter = PlateFilter(cooldown_seconds=Config.COOLDOWN_SECONDS)
 
-# ✅ FIX Bug 4: Track previous y-positions per plate index to infer movement direction
+#  4: Track previous y-positions per plate index to infer movement direction
 _prev_y_positions = {}
 
 
@@ -38,7 +38,7 @@ def determine_direction(plate_id, y_center):
     1. Movement direction (current y vs previous y) — more reliable
     2. Zone-based fallback if no previous position exists
     """
-    # ✅ FIX Bug 4: Use prev_y to detect movement direction
+    #  4: Use prev_y to detect movement direction
     prev_y = _prev_y_positions.get(plate_id)
     _prev_y_positions[plate_id] = y_center
 
@@ -73,10 +73,10 @@ def process_image(image_path):
     """
     img = cv2.imread(image_path)
     if img is None:
-        print(f"❌ Image not found: {image_path}")
+        print(f" Image not found: {image_path}")
         return
 
-    # ✅ FIX Bug 5: Use image basename in all debug output filenames
+    #  5: Use image basename in all debug output filenames
     base_name = os.path.splitext(os.path.basename(image_path))[0]
 
     print(f"\n{'='*50}")
@@ -85,40 +85,40 @@ def process_image(image_path):
     print(f"{'='*50}\n")
 
     results = model(img, conf=Config.CONFIDENCE)
-    print(f"🔍 Detections found: {len(results[0].boxes) if results[0].boxes else 0}")
+    print(f" Detections found: {len(results[0].boxes) if results[0].boxes else 0}")
 
     yolo_output = results[0].plot()
     cv2.imwrite(f"{base_name}_yolo.jpg", yolo_output)
 
-    # ✅ FIX Bug 1: Unpack 3-tuple (plate, bbox, conf) from updated crop_plates()
+    #  1: Unpack 3-tuple (plate, bbox, conf) from updated crop_plates()
     plates = crop_plates(results, img, confidence_threshold=Config.CONFIDENCE)
-    print(f"📦 Plates cropped: {len(plates)}")
+    print(f" Plates cropped: {len(plates)}")
 
     processed_count = 0
 
     for i, (plate_img, (x1, y1, x2, y2), conf) in enumerate(plates):
         print(f"\n--- Processing Plate {i+1} (conf: {conf:.2f}) ---")
 
-        # ✅ FIX Bug 5: Unique debug filenames per image + plate index
+        #  5: Unique debug filenames per image + plate index
         cv2.imwrite(f"{base_name}_plate_{i}.jpg", plate_img)
 
         plate_center_y = (y1 + y2) // 2
         plate_center_x = (x1 + x2) // 2
-        print(f"📐 Plate position: x={plate_center_x}, y={plate_center_y}")
+        print(f" Plate position: x={plate_center_x}, y={plate_center_y}")
 
-        # ✅ FIX Bug 4: Pass a stable plate_id for tracking
+        #  4: Pass a stable plate_id for tracking
         direction = determine_direction(plate_id=i, y_center=plate_center_y)
 
         if direction is None:
             direction = "entry"
-            print(f"⚠️ Could not determine direction — defaulting to: {direction}")
+            print(f" Could not determine direction — defaulting to: {direction}")
         else:
-            print(f"📍 Direction: {direction.upper()}")
+            print(f" Direction: {direction.upper()}")
 
         text = extract_text(plate_img)
 
         if text:
-            print(f"🧠 OCR Result: {text}")
+            print(f" OCR Result: {text}")
 
             allowed, final_direction = plate_filter.is_allowed(text, direction)
 
@@ -129,13 +129,13 @@ def process_image(image_path):
                     logger.log_exit(text)
                 processed_count += 1
             else:
-                print(f"⏱️ Skipping {text} — cooldown active")
+                print(f" Skipping {text} — cooldown active")
 
             color = (0, 255, 0) if direction == "entry" else (0, 0, 255)
             cv2.rectangle(img, (x1, y1), (x2, y2), color, 2)
             _draw_label(img, f"{text} ({direction})", x1, y1, color)
         else:
-            print(f"⚠️ No valid text extracted from plate {i+1}")
+            print(f" No valid text extracted from plate {i+1}")
             cv2.rectangle(img, (x1, y1), (x2, y2), (0, 0, 255), 2)
             _draw_label(img, "OCR Failed", x1, y1, (0, 0, 255))
 
@@ -157,9 +157,9 @@ def process_image(image_path):
         else:
             print("Active vehicles: None")
     except Exception as e:
-        print(f"⚠️ Could not get active vehicles: {e}")
+        print(f" Could not get active vehicles: {e}")
 
-    print(f"\n📁 Output: {output_path}")
+    print(f"\n Output: {output_path}")
     print(f"{'='*50}\n")
 
     return img
@@ -171,7 +171,7 @@ def process_video(video_path, process_every_n_frames=10):
     """
     cap = cv2.VideoCapture(video_path)
     if not cap.isOpened():
-        print(f"❌ Could not open video: {video_path}")
+        print(f" Could not open video: {video_path}")
         return
 
     fps    = int(cap.get(cv2.CAP_PROP_FPS))
@@ -203,7 +203,7 @@ def process_video(video_path, process_every_n_frames=10):
 
             results = model(frame, conf=Config.CONFIDENCE)
 
-            # ✅ FIX Bug 1: Unpack 3-tuple from updated crop_plates()
+            #  1: Unpack 3-tuple from updated crop_plates()
             plates = crop_plates(results, frame, confidence_threshold=Config.CONFIDENCE)
 
             if plates:
@@ -214,7 +214,7 @@ def process_video(video_path, process_every_n_frames=10):
 
                 if text:
                     plate_center_y = (y1 + y2) // 2
-                    # ✅ FIX Bug 4: Use frame-scoped plate id for tracking
+                    #  4: Use frame-scoped plate id for tracking
                     direction = determine_direction(plate_id=f"video_{i}", y_center=plate_center_y)
                     if direction is None:
                         direction = "entry"
@@ -226,14 +226,14 @@ def process_video(video_path, process_every_n_frames=10):
                             logger.log_entry(text)
                         elif final_direction == "exit":
                             logger.log_exit(text)
-                        print(f"   ✅ {text} — {final_direction.upper()}")
+                        print(f"    {text} — {final_direction.upper()}")
 
                     color = (0, 255, 0) if direction == "entry" else (0, 0, 255)
                     cv2.rectangle(frame, (x1, y1), (x2, y2), color, 2)
                     cv2.putText(frame, f"{text} ({direction})", (x1, y1 - 10),
                                 cv2.FONT_HERSHEY_SIMPLEX, 0.6, color, 2)
 
-        # ✅ FIX Bug 3: Always write every frame to keep output video at correct fps
+        #  3: Always write every frame to keep output video at correct fps
         out.write(frame)
 
     cap.release()
@@ -252,7 +252,7 @@ def process_multiple_images(image_folder):
     Process all images in a folder.
     """
     if not os.path.exists(image_folder):
-        print(f"❌ Folder not found: {image_folder}")
+        print(f" Folder not found: {image_folder}")
         return
 
     image_extensions = ['.jpg', '.jpeg', '.png', '.bmp']
@@ -260,7 +260,7 @@ def process_multiple_images(image_folder):
               if any(f.lower().endswith(ext) for ext in image_extensions)]
 
     if not images:
-        print(f"❌ No images found in {image_folder}")
+        print(f" No images found in {image_folder}")
         return
 
     print(f"\n{'='*50}")
@@ -282,12 +282,12 @@ def process_multiple_images(image_folder):
 # MAIN
 # ==============================
 if __name__ == "__main__":
-    image_path = "mycar.jpg"
+    image_path = "car.jpg"
 
     if os.path.exists(image_path):
         process_image(image_path)
     else:
-        print(f"❌ Image not found: {image_path}")
+        print(f"= Image not found: {image_path}")
         print(f"Files in current directory: {os.listdir('.')}")
 
     # Uncomment for video:

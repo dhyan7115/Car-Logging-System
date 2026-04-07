@@ -3,9 +3,9 @@ from datetime import datetime, timedelta
 import os
 import hashlib
 
-FILE = "/home/dhyan/Desktop/DL/log.xlsx"
+FILE = "/home/dhyan/Desktop/DL/log1.xlsx"
 
-# ✅ FIX Bug 4: Debounce — ignore same plate within this many seconds
+#  4: Debounce — ignore same plate within this many seconds
 DEBOUNCE_SECONDS = 10
 
 
@@ -17,13 +17,13 @@ class VehicleLogger:
 
     def _ensure_file_exists(self):
         """Create Excel file if it doesn't exist"""
-        # ✅ FIX Bug 1: Only call makedirs if there's actually a directory component
+        #  1: Only call makedirs if there's actually a directory component
         dir_name = os.path.dirname(self.file_path)
         if dir_name:
             os.makedirs(dir_name, exist_ok=True)
 
         if not os.path.exists(self.file_path):
-            print(f"📁 Creating new log file: {self.file_path}")
+            print(f" Creating new log file: {self.file_path}")
             df = pd.DataFrame(columns=[
                 "Plate", "Entry_Time", "Exit_Time",
                 "Duration", "Status", "Session_ID"
@@ -35,7 +35,7 @@ class VehicleLogger:
         try:
             return pd.read_excel(self.file_path, engine='openpyxl', dtype=str)
         except Exception as e:
-            print(f"⚠️ Error reading Excel: {e}")
+            print(f" Error reading Excel: {e}")
             if os.path.exists(self.file_path):
                 os.remove(self.file_path)
             self._ensure_file_exists()
@@ -58,7 +58,7 @@ class VehicleLogger:
         if plate in self._last_seen:
             elapsed = (datetime.now() - self._last_seen[plate]).total_seconds()
             if elapsed < DEBOUNCE_SECONDS:
-                print(f"⏱️ Debounced: {plate} was logged {elapsed:.1f}s ago, skipping")
+                print(f" Debounced: {plate} was logged {elapsed:.1f}s ago, skipping")
                 return True
         return False
 
@@ -67,7 +67,7 @@ class VehicleLogger:
         if self._is_debounced(plate):
             return False
 
-        print(f"📝 [ENTRY] Processing entry for: {plate}")
+        print(f" [ENTRY] Processing entry for: {plate}")
         df = self._read_excel()
         now = datetime.now()
         now_str = now.strftime("%Y-%m-%d %H:%M:%S")
@@ -75,7 +75,7 @@ class VehicleLogger:
 
         active = self._get_active_session(plate)
         if active is not None:
-            print(f"⚠️ {plate} already has an open session since {active['Entry_Time']}")
+            print(f" {plate} already has an open session since {active['Entry_Time']}")
             print("   Auto-closing previous session before logging new entry")
             idx = active.name
             entry_time = pd.to_datetime(active["Entry_Time"])
@@ -99,7 +99,7 @@ class VehicleLogger:
         self._write_excel(df)
 
         self._last_seen[plate] = now
-        print(f"✅ ENTRY LOGGED: {plate} at {now_str}")
+        print(f" ENTRY LOGGED: {plate} at {now_str}")
         return True
 
     def log_exit(self, plate):
@@ -107,12 +107,12 @@ class VehicleLogger:
         if self._is_debounced(plate):
             return False
 
-        print(f"📝 [EXIT] Processing exit for: {plate}")
+        print(f" [EXIT] Processing exit for: {plate}")
         df = self._read_excel()
         active = self._get_active_session(plate)
 
         if active is None:
-            print(f"❌ No active session found for {plate}. Was entry missed?")
+            print(f" No active session found for {plate}. Was entry missed?")
             return False
 
         now = datetime.now()
@@ -127,7 +127,7 @@ class VehicleLogger:
         self._write_excel(df)
 
         self._last_seen[plate] = now
-        print(f"✅ EXIT LOGGED: {plate}")
+        print(f" EXIT LOGGED: {plate}")
         print(f"   Entry:    {entry_time.strftime('%Y-%m-%d %H:%M:%S')}")
         print(f"   Exit:     {now_str}")
         print(f"   Duration: {str(duration).split('.')[0]}")
@@ -142,7 +142,7 @@ class VehicleLogger:
             df = self._read_excel()
 
             if plate:
-                # ✅ FIX Bug 3: Single source of truth — Exit_Time only
+                #  3: Single source of truth — Exit_Time only
                 active = self._get_active_session(plate)
                 return "Inside" if active is not None else "Outside"
             else:
@@ -150,7 +150,7 @@ class VehicleLogger:
                 return active_vehicles["Plate"].tolist()
 
         except Exception as e:
-            print(f"⚠️ Error getting status: {e}")
+            print(f" Error getting status: {e}")
             return [] if plate is None else "Unknown"
 
 
@@ -167,5 +167,5 @@ def log_plate(plate, direction="entry"):
     elif direction == "exit":
         return _logger.log_exit(plate)
     else:
-        print(f"❌ Invalid direction: {direction}")
+        print(f" Invalid direction: {direction}")
         return False

@@ -26,13 +26,13 @@ class PlateFilter:
 
                 # Same direction within cooldown → ignore
                 if prev_direction == current_direction:
-                    print(f"⏱️ [{plate}] Ignored — same direction '{current_direction}' within cooldown ({time_diff:.1f}s)")
+                    print(f" [{plate}] Ignored — same direction '{current_direction}' within cooldown ({time_diff:.1f}s)")
                     return False, None
 
-                # ✅ FIX Bug 1: Different direction within cooldown → allow but
+                # 1: Different direction within cooldown → allow but
                 # only update direction, NOT the timestamp, so the cooldown
                 # clock keeps running from the original detection
-                print(f"🔄 [{plate}] Direction changed: '{prev_direction}' → '{current_direction}' (within cooldown)")
+                print(f" [{plate}] Direction changed: '{prev_direction}' → '{current_direction}' (within cooldown)")
                 self.last_direction[plate] = current_direction
                 return True, current_direction
 
@@ -50,15 +50,15 @@ class PlateFilter:
             self.last_detection.clear()
             self.last_direction.clear()
 
-    # ✅ FIX Bug 4: Debug helper to see current filter state
+    # 4: Debug helper to see current filter state
     def status(self):
         """Print current tracked plates and their cooldown remaining"""
         now = time.time()
         if not self.last_detection:
-            print("📋 PlateFilter: No plates currently tracked")
+            print(" PlateFilter: No plates currently tracked")
             return
 
-        print("📋 PlateFilter Status:")
+        print(" PlateFilter Status:")
         for plate, ts in self.last_detection.items():
             remaining = self.cooldown - (now - ts)
             direction = self.last_direction.get(plate, "unknown")
@@ -69,7 +69,7 @@ class PlateFilter:
 
 
 # Global instance
-# ✅ FIX Bug 2: Accept direction in the wrapper so direction logic is actually used
+# 2: Accept direction in the wrapper so direction logic is actually used
 _filter = PlateFilter(cooldown_seconds=5)
 
 
@@ -79,5 +79,5 @@ def is_allowed(plate, direction=None):
     Pass direction="entry" or direction="exit" for correct filtering.
     Returns: (allowed: bool, direction: str | None)
     """
-    # ✅ FIX Bug 2: direction is now passed through instead of hardcoded None
+    # 2: direction is now passed through instead of hardcoded None
     return _filter.is_allowed(plate, current_direction=direction)

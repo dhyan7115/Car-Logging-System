@@ -14,7 +14,7 @@ INDIAN_STATE_CODES = {
     'CH', 'DD', 'DL', 'DN', 'LD', 'PY', 'LA'
 }
 
-# ✅ FIX: Separate correction maps for letter zones vs digit zones
+# Separate correction maps for letter zones vs digit zones
 # In letter zones: digits that look like letters → convert to letters
 DIGIT_TO_LETTER = {
     '0': 'O', '1': 'I', '2': 'Z', '3': 'E',
@@ -22,10 +22,9 @@ DIGIT_TO_LETTER = {
 }
 
 # In digit zones: letters that look like digits → convert to digits
-# ⚠️ Do NOT add L→1 or Z→2 here — L and Z are valid series letters (e.g. MW misread as MLZ)
-# Only map characters that are NEVER valid in a digit position
+# Z→7: EasyO CR consistently misreads bold '7' as 'Z' on Indian plates
 LETTER_TO_DIGIT = {
-    'O': '0', 'I': '1',
+    'O': '0', 'I': '1', 'Z': '7',
     'S': '5', 'G': '6', 'B': '8', 'T': '7'
 }
 
@@ -158,7 +157,7 @@ def parse_plate(raw):
     for i in range(len(raw) - 5):
         result = try_parse_from(raw[i:])
         if result:
-            print(f"✅ Parsed plate: {result}")
+            print(f" Parsed plate: {result}")
             return result
 
     return None
@@ -193,7 +192,7 @@ def combine_and_extract_plate(all_texts_with_bbox):
             if s_text == l_text:
                 continue
             combined = s_text + l_text
-            print(f"\n🔗 Trying pair: '{s_text}' + '{l_text}' = '{combined}'")
+            print(f"\n Trying pair: '{s_text}' + '{l_text}' = '{combined}'")
             result = parse_plate(combined)
             if result:
                 return result
@@ -214,7 +213,7 @@ def combine_and_extract_plate(all_texts_with_bbox):
 
     position_sorted = sorted(cleaned_texts, key=bbox_sort_key)
     combined = ''.join([t[0] for t in position_sorted])
-    print(f"\n🔗 Trying full combined (position-sorted): '{combined}'")
+    print(f"\n Trying full combined (position-sorted): '{combined}'")
     return parse_plate(combined)
 
 
@@ -235,18 +234,24 @@ def extract_text(img):
 
         all_results = []
 
+        # Allowlist: only characters that appear on Indian plates
+        # This eliminates noise like =, ", F prefix misreads
+        PLATE_CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
+
         for idx, version in enumerate(preprocessed_versions):
-            # Run with two width thresholds per version for better coverage
-            r1 = reader.readtext(version, paragraph=False, width_ths=0.7)
-            r2 = reader.readtext(version, paragraph=False, width_ths=0.3, contrast_ths=0.1)
+            r1 = reader.readtext(version, paragraph=False, width_ths=0.7,
+                                 allowlist=PLATE_CHARS)
+            r2 = reader.readtext(version, paragraph=False, width_ths=0.3,
+                                 contrast_ths=0.1, allowlist=PLATE_CHARS)
             all_results.extend(r1)
             all_results.extend(r2)
 
-        # Also run on original image
-        all_results.extend(reader.readtext(img, paragraph=False, width_ths=0.7))
+        # Also run on original image with allowlist
+        all_results.extend(reader.readtext(img, paragraph=False, width_ths=0.7,
+                                           allowlist=PLATE_CHARS))
 
         if not all_results:
-            print("❌ No text detected")
+            print(" No text detected")
             return ""
 
         # Deduplicate — keep highest confidence per unique text, preserve bbox
@@ -270,14 +275,14 @@ def extract_text(img):
         plate = combine_and_extract_plate(all_texts)
 
         if plate:
-            print(f"\n✅ Final plate: {plate}")
+            print(f"\n Final plate: {plate}")
             return plate
 
-        print("\n⚠️ Could not extract valid plate number")
+        print("\n Could not extract valid plate number")
         return ""
 
     except Exception as e:
-        print(f"❌ OCR Error: {e}")
+        print(f" OCR Error: {e}")
         import traceback
         traceback.print_exc()
         return ""

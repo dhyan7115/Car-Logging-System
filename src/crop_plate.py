@@ -1,7 +1,7 @@
 import cv2
 import numpy as np
 
-# ✅ FIX Bug 3: Only process detections above this confidence threshold
+# 3: Only process detections above this confidence threshold
 CONFIDENCE_THRESHOLD = 0.5
 
 
@@ -12,7 +12,7 @@ def crop_plates(results, frame, confidence_threshold=CONFIDENCE_THRESHOLD):
     """
     plates = []
 
-    # ✅ FIX Bug 4: Guard against empty results properly
+    # 4: Guard against empty results properly
     if not results or results[0].boxes is None or len(results[0].boxes) == 0:
         return plates
 
@@ -21,10 +21,10 @@ def crop_plates(results, frame, confidence_threshold=CONFIDENCE_THRESHOLD):
     boxes = results[0].boxes
 
     for i, box in enumerate(boxes.xyxy):
-        # ✅ FIX Bug 3: Skip low-confidence detections
+        # 3: Skip low-confidence detections
         conf = float(boxes.conf[i])
         if conf < confidence_threshold:
-            print(f"⚠️ Skipping low-confidence detection: {conf:.2f}")
+            print(f" Skipping low-confidence detection: {conf:.2f}")
             continue
 
         x1, y1, x2, y2 = map(int, box)
@@ -43,7 +43,7 @@ def crop_plates(results, frame, confidence_threshold=CONFIDENCE_THRESHOLD):
         if plate.size == 0:
             continue
 
-        # ✅ FIX Bug 1 & 2: deskew is now enabled and uses corrected angle logic
+        # 1 & 2: deskew is now enabled and uses corrected angle logic
         plate = deskew_plate(plate)
 
         plates.append((plate, (x1, y1, x2, y2), conf))
@@ -62,7 +62,7 @@ def deskew_plate(plate):
 
     thresh = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)[1]
 
-    # ✅ FIX Bug 1: coords from np.where are (row, col) = (y, x)
+    # 1: coords from np.where are (row, col) = (y, x)
     # We need to flip to (x, y) for minAreaRect
     coords = np.column_stack(np.where(thresh > 0))  # shape: (N, 2) as (y, x)
 
@@ -76,7 +76,7 @@ def deskew_plate(plate):
     rect = cv2.minAreaRect(coords_xy)
     angle = rect[-1]
 
-    # ✅ FIX Bug 1: Correct angle interpretation for minAreaRect
+    # 1: Correct angle interpretation for minAreaRect
     # minAreaRect returns angle in [-90, 0). We normalise to a skew offset:
     # - If angle < -45, the rect is "standing up" → rotate by (90 + angle)
     # - Otherwise rotate by angle directly
